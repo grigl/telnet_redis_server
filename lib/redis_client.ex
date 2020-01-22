@@ -1,44 +1,43 @@
-defmodule TelnetRedisServer do
+defmodule RedisClient do
   @moduledoc """
-  Documentation for TelnetRedisServer.
+
   """
 
   @doc """
-  Hello world.
-
-  ## Examples
-
-      iex> TelnetRedisServer.hello()
-      :world
 
   """
 
   @redis_url "redis://localhost:6379/3"
 
-  def set(key, value) do
+  def set(params) do
+    [key, value | _] = params
+
     fn
       {conn, [key, value]} ->
         case Redix.command(conn, ["SET", key, value]) do
-          {:ok, _result} -> IO.puts(:ok)
-          {:error, error} -> IO.inspect(error)
+          {:ok, _result} -> IO.puts(:ok); "ok"
+          {:error, error} -> IO.inspect(error); "#{inspect error}"
         end
     end |> send_command([key, value])
   end
 
-  def get(key) do
+  def get(params) do
+    [key | _]= params
+
     fn
       {conn, key} ->
         case Redix.command(conn, ["GET", key]) do
-          {:ok, result} -> IO.puts(result)
-          {:error, error} -> IO.inspect(error)
+          {:ok, result} -> IO.puts(result); result
+          {:error, error} -> IO.inspect(error); "#{inspect error}"
         end
     end |> send_command(key)
   end
 
-  def send_command(func, opts) do
+  defp send_command(func, opts) do
     conn = start_conn()
-    func.({conn, opts})
+    result = func.({conn, opts})
     Redix.stop(conn)
+    result
   end
 
   defp start_conn() do
